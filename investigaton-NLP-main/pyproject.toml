@@ -1,0 +1,15 @@
+[project]
+name = "longmemeval-investigathon"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "python-dotenv",
+    "litellm",
+    "pandas",
+    "datasets",
+    "huggingface-hub",
+    "pydantic",
+    "gdown",
+    "ipykernel",
+    "black"
+]
