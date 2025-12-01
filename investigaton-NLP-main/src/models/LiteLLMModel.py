@@ -8,4 +8,4 @@ class LiteLLMModel(Model):
 
     def reply(self, messages, tools=None):
         response = completion(model=self.name, messages=messages)
-        return response.choices[0].message.content
+        return response
