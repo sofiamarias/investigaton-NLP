@@ -55,6 +55,12 @@ class RAGAgent:
         The question is: {instance.question}
         Return the answer to the question.
         """
+        promptSinEvidencia = f"""
+        Return the answer to this question {instance.question}.
+        
+        """
         messages = [{"role": "user", "content": prompt}]
-        answer = self.model.reply(messages)
+        reply = self.model.reply(messages)
+        answer = reply.choices[0].message.content
+        
         return answer
