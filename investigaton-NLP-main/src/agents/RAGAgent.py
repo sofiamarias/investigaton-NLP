@@ -29,7 +29,7 @@ def get_messages_and_embeddings(instance: LongMemEvalInstance, embedding_model_n
     return messages, embeddings
 
 
-def retrieve_most_relevant_messages(instance: LongMemEvalInstance, k: int, embedding_model_name):
+def retrieve_most_relevant_sessions(instance: LongMemEvalInstance, k: int, embedding_model_name):
 
     question_embedding = embed_text(instance.question, embedding_model_name)
     messages, embeddings = get_messages_and_embeddings(instance, embedding_model_name)
@@ -47,11 +47,11 @@ class RAGAgent:
         self.embedding_model_name = embedding_model_name
 
     def answer(self, instance: LongMemEvalInstance):
-        most_relevant_messages = retrieve_most_relevant_messages(instance, 10, self.embedding_model_name)
+        most_relevant_sessions = retrieve_most_relevant_sessions(instance, 10, self.embedding_model_name)
 
         prompt = f"""
         You are a helpful assistant that answers a question based on the evidence.
-        The evidence is: {most_relevant_messages}
+        The evidence is: {most_relevant_sessions}
         The question is: {instance.question}
         Return the answer to the question.
         """

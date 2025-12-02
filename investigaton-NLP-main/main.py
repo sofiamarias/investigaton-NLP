@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument(
         "-n", "--num-samples",
         type=int,
-        default=10,
+        default=500,
         help="Number of samples to process (default: 10)"
     )
     return parser.parse_args()
