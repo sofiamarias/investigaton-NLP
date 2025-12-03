@@ -23,7 +23,7 @@ def parse_args():
         "--judge-model",
         type=str,
         default="openai/gpt-5-mini",
-        help="Model name for judge agent (default: ollama/gemma3:4b)"
+        help="Model name for judge agent (default: openai/gpt-5-mini)"
     )
     parser.add_argument(
         "--dataset-type",
@@ -79,7 +79,6 @@ print(f"Processing samples...")
 print("=" * 100)
 
 # Process samples
-print(longmemeval_dataset.dataset.columns.tolist())
 for instance in longmemeval_dataset[: config.N]:
     result_file = f"{results_dir}/{instance.question_id}.json"
 
@@ -97,8 +96,8 @@ for instance in longmemeval_dataset[: config.N]:
         result = {
             "question_id": instance.question_id,
             "question": instance.question,
-            "question_type": instance.question_type,
             "predicted_answer": predicted_answer,
+            "question_type": instance.question_type
         }
         if config.longmemeval_dataset_set != "investigathon_held_out":
             result["answer"] = instance.answer
@@ -107,14 +106,10 @@ for instance in longmemeval_dataset[: config.N]:
         json.dump(result, f, indent=2)
 
         print(f"  Question: {instance.question}...")
-        print(f" Question type: {instance.question_type}...")
         print(f"  Predicted: {predicted_answer}")
         if config.longmemeval_dataset_set != "investigathon_held_out":
             print(f"  Ground Truth: {instance.answer}")
             print(f"  Correct: {answer_is_correct}")
         print("-" * 100)
 
-print(f"Prompt tokens used: {judge_agent.prompt_tokens}")        
-print(f"Completions token used: {judge_agent.completion_tokens}")        
-print(f"Total tokens used: {judge_agent.total_tokens}")
 print("EVALUATION COMPLETE")
