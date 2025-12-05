@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument(
         "-n", "--num-samples",
         type=int,
-        default=500,
+        default=133,
         help="Number of samples to process (default: 10)"
     )
     return parser.parse_args()
@@ -80,6 +80,8 @@ print("=" * 100)
 
 # Process samples
 for instance in longmemeval_dataset[: config.N]:
+    if instance.question_type != "temporal-reasoning":
+        continue
     result_file = f"{results_dir}/{instance.question_id}.json"
 
     if os.path.exists(result_file):
@@ -97,7 +99,8 @@ for instance in longmemeval_dataset[: config.N]:
             "question_id": instance.question_id,
             "question": instance.question,
             "predicted_answer": predicted_answer,
-            "question_type": instance.question_type
+            "question_type": instance.question_type,
+            "question_date": instance.question_date
         }
         if config.longmemeval_dataset_set != "investigathon_held_out":
             result["answer"] = instance.answer

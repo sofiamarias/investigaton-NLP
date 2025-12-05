@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/embeddings_ollama_nomic-embed-text_memory_ollama_gemma3:4b_judge_openai_gpt-5-mini/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/versionpromptsofi/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         question_types = []
         answers = []
@@ -34,18 +34,20 @@ class Analysis:
         fractions = {t: f"{wrong_count_by_type.get(t, 0)} / {total_count_by_type[t]}"
              for t in total_count_by_type}
         types = list(wrong_count_by_type.keys())
-        counts = list(wrong_count_by_type.values())
+        #counts = list(wrong_count_by_type.values())
 
         plt.figure(figsize=(10,5))
-        bars = plt.bar(types, counts)
-
+        
+        counts = []
         for i, t in enumerate(types):
             wrong = wrong_count_by_type.get(t, 0)
             total = total_count_by_type[t]
             ratio = round(wrong * 100 / total, 1)
-            plt.text(i, wrong + 0.5, f"{wrong}/{total} ({ratio}%)", ha='center')
+            counts.append(ratio)
+            plt.text(i, ratio + 0.5 , f"{ratio}% {total}", ha='center')
+        bars = plt.bar(types, counts)
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
-        plt.savefig("a.png")
+        plt.savefig("abc.png")
         plt.show()
 
