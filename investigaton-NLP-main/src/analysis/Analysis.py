@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/versionpromptsofi/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/muestra30bastantebuena/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         question_types = []
         answers = []
@@ -44,10 +44,10 @@ class Analysis:
             total = total_count_by_type[t]
             ratio = round(wrong * 100 / total, 1)
             counts.append(ratio)
-            plt.text(i, ratio + 0.5 , f"{ratio}% {total}", ha='center')
+            plt.text(i, ratio + 0.5 , f"{ratio}% {wrong}/{total}", ha='center')
         bars = plt.bar(types, counts)
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
-        plt.savefig("abc.png")
+        plt.savefig("muestra30mejoracontexto.png")
         plt.show()
 
