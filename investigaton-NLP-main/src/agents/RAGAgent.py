@@ -86,8 +86,6 @@ class RAGAgent:
 
     def answer(self, instance: LongMemEvalInstance):
         topk_relevant_messages, topk_relevant_sessions, topk_relevant_dates = retrieve_most_relevant_messages(instance, 10, self.embedding_model_name)
-
-
         contextualized_topk_relevant_messages = self.retrieve_contextualized_messages(instance, topk_relevant_messages, topk_relevant_sessions)
         prompt = f"""
         You are a helpful assistant that answers a question based on the evidence.
