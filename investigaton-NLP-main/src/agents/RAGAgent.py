@@ -58,25 +58,42 @@ def get_messages_and_embeddings_and_dates(instance: LongMemEvalInstance, embeddi
 
 
 
-def retrieve_most_relevant_messages(instance: LongMemEvalInstance, k: int, embedding_model_name):
-
-    question_embedding = embed_text(f"date: {instance.question_date}: {instance.question}", embedding_model_name)
+def retrieve_most_relevant_messages(instance: LongMemEvalInstance, k: int, embedding_model_name, similarity_threshold=0.45):
+    #Borro embedding de fecha
+    question_embedding = embed_text(f"{instance.question}", embedding_model_name)
     messages, embeddings, dates, sessions = get_messages_and_embeddings_and_dates(instance, embedding_model_name)
-
     similarity_scores = np.dot(embeddings, question_embedding)
-    #print(similarity_scores)
-    most_relevant_messages_indices = np.argsort(similarity_scores)[::-1][:k]
-    most_relevant_messages = []
-    most_relevant_dates = []
-    most_relevant_sessions = []
+    
+    #Abstention
+    if np.max(similarity_scores) < similarity_threshold:
+        return [], [], []
 
-    for i in most_relevant_messages_indices:
-        most_relevant_messages.append(messages[i])
-        most_relevant_dates.append(dates[i])
-        most_relevant_sessions.append(sessions[i])
-    for i in range(k):
-        most_relevant_messages[i] = f"Date: {most_relevant_dates[i]}. Role: {most_relevant_messages[i]["role"]}. Message: {most_relevant_messages[i]["content"]} \n"
-    return most_relevant_messages, most_relevant_sessions, most_relevant_dates
+    # Recuperamos índices ordenados por relevancia
+    top_indices = np.argsort(similarity_scores)[::-1][:k]
+
+    found_items = []
+    for i in top_indices:
+        found_items.append({
+            "message": messages[i],
+            "date": dates[i],
+            "session": sessions[i],
+            "score": similarity_scores[i]
+        })
+
+    #Ordeno los mensajes por fecha
+    found_items.sort(key=lambda x: x["date"]) 
+
+    final_messages = []
+    final_sessions = []
+    final_dates = []
+    
+    for item in found_items:
+        msg_str = f"[Date: {item['date']}] [Role: {item['message']['role']}] {item['message']['content']}"
+        final_messages.append(msg_str)
+        final_sessions.append(item['session'])
+        final_dates.append(item['date'])
+
+    return final_messages, final_sessions, final_dates
 
 
 class RAGAgent:
@@ -86,16 +103,18 @@ class RAGAgent:
 
     def answer(self, instance: LongMemEvalInstance):
         topk_relevant_messages, topk_relevant_sessions, topk_relevant_dates = retrieve_most_relevant_messages(instance, 10, self.embedding_model_name)
-        contextualized_topk_relevant_messages = self.retrieve_contextualized_messages(instance, topk_relevant_messages, topk_relevant_sessions)
+
+
+        #contextualized_topk_relevant_messages = self.retrieve_contextualized_messages(instance, topk_relevant_messages, topk_relevant_sessions)
         prompt = f"""
         You are a helpful assistant that answers a question based on the evidence.
-        The evidence is: {contextualized_topk_relevant_messages}
+        The evidence is: {topk_relevant_messages}
         The question date is: {instance.question_date} and the question is: {instance.question}
         Return the answer to the question.
         """
         messages = [{"role": "user", "content": prompt}]
         answer = self.model.reply(messages)
-        
+        print("Turno de GPT5-Mini")
         return answer
     
     def retrieve_contextualized_messages(self, instance: LongMemEvalInstance, topk_relevant_messages, topk_relevant_sessions):
@@ -113,7 +132,8 @@ class RAGAgent:
         session_messages = session.messages
         session_messages_formatted = []
         for i in range(len(session_messages)):
-            session_messages_formatted = f"Role: {session_messages[i]["role"]}. Message: s{session_messages[i]["content"]} \n"
+            session_messages_formatted.append(f"Role: {session_messages[i]["role"]}. Message: s{session_messages[i]["content"]} \n")
+        #Esto es demasiadísimo
         session_summary = f"Session date: {session.date}, session_messages: {session_messages_formatted}"
         prompt = f"""
         You will generate a brief context (1–2 sentences) describing where a message fits within a session.

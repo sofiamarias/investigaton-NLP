@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/muestra30bastantebuena/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/embeddings_ollama_nomic-embed-text_memory_ollama_gemma3:4b_judge_openai_gpt-5-mini/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         question_types = []
         answers = []
@@ -31,6 +31,7 @@ class Analysis:
                 wrong_count_by_type[qtype] = wrong_count_by_type.get(qtype, 0) + 1
 
         # Gráfico
+ 
         fractions = {t: f"{wrong_count_by_type.get(t, 0)} / {total_count_by_type[t]}"
              for t in total_count_by_type}
         types = list(wrong_count_by_type.keys())
@@ -48,6 +49,7 @@ class Analysis:
         bars = plt.bar(types, counts)
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
-        plt.savefig("muestra30mejoracontexto.png")
+        plt.savefig("muestra500parcialmejoracontexto.png")
         plt.show()
 
+    
