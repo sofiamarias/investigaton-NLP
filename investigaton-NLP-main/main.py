@@ -5,8 +5,10 @@ from dotenv import load_dotenv
 from src.models.LiteLLMModel import LiteLLMModel
 from src.agents.JudgeAgent import JudgeAgent
 from src.agents.RAGAgent import RAGAgent
+from src.agents.SemanticRetrieverAgent import SemanticRetrieverAgent
 from src.datasets.LongMemEvalDataset import LongMemEvalDataset
 from config.config import Config
+
 
 load_dotenv()
 
@@ -42,7 +44,7 @@ def parse_args():
     parser.add_argument(
         "-n", "--num-samples",
         type=int,
-        default=30,
+        default=10,
         help="Number of samples to process (default: 10)"
     )
     return parser.parse_args()
@@ -65,8 +67,10 @@ print(f"  Embedding Model: {config.embedding_model_name}")
 
 memory_model = LiteLLMModel(config.memory_model_name)
 judge_model = LiteLLMModel(config.judge_model_name)
+##Agentes
 judge_agent = JudgeAgent(model=judge_model)
-memory_agent = RAGAgent(model=memory_model, embedding_model_name=config.embedding_model_name)
+semantic_retriever_agent = SemanticRetrieverAgent(embedding_model_name=config.embedding_model_name)
+memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_retriever_agent)
 
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
