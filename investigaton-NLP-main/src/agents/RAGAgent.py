@@ -9,27 +9,41 @@ class RAGAgent:
         self.model = model
         self.semantic_retriever_agent = semantic_retriever_agent
         self.contextualizer_agent = contextualizer_agent
+
+        self.sessions_id_used_by_question = {}
+
+    
+    def get_sessions_used_by(self, question_id):
+        return self.sessions_id_used_by_question.get(question_id, [])
+
     def answer(self, instance: LongMemEvalInstance):
-        topk_relevant_messages, topk_relevant_sessions = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance, 10)
-        if not topk_relevant_messages:
+        #Conseguimos los documentos más relevantes
+        topk_relevant_documents = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance)
+        if not topk_relevant_documents:
             return "I do not have enough information"
-        #Todavia no funciona
+        #Guardamos las sesiones usadas
+
+        
+        contents = []
+        for document in topk_relevant_documents:
+            contents.append(f"[{document['timestamp']}]: {document['content']}")
+            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(document['session_id'])        #Todavia no funciona
         #list_contextualized_topk_relevant_messages = self.contextualizer_agent.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
         #contextualized_topk_relevant_messages = "\n\n".join(list_contextualized_topk_relevant_messages)
 
         answer_format = self.answer_format(instance.question)
         prompt = f"""
         ### INSTRUCTION:
-        You are an intelligent assistant. You must answer the USER QUESTION based on the provided MEMORY CONTEXT.
+        You are an intelligent assistant. You must answer the QUESTION based on the provided MEMORY CONTEXT.
 
         ### MEMORY CONTEXT:
-        {topk_relevant_messages}
+        {contents}
         -----------------------
         ### GUIDELINES:
         1. **Analyze**: Read the context carefully. Look for direct answers OR information that allows you to infer the answer.
         2. **Synthesize**: You can combine information from multiple messages to form a complete answer.
-        3. **Strictness**: If the context is not related to the question, say "I don't have enough information." However, if the context contains partial clues, use them to answer as best as you can, explicitly stating what is known.
-        2. **Temporal Reasoning**: Pay close attention to the dates in brackets [YYYY-MM-DD]. If you find contradictory information, ALWAYS prioritize the information with the most recent date.
+        3. **Strictness**: If the context is not related to the question, say "I don't have enough information."
+        4. **Temporal Reasoning**: Pay close attention to the dates in brackets [YYYY-MM-DD]. If you find contradictory information, ALWAYS prioritize the information with the most recent date.
 
         ### USER QUESTION:
         [{instance.question_date}]: {instance.question}

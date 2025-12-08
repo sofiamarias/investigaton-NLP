@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument(
         "-n", "--num-samples",
         type=int,
-        default=15,
+        default=10,
         help="Number of samples to process (default: 10)"
     )
     return parser.parse_args()
@@ -105,6 +105,7 @@ for instance in longmemeval_dataset[: config.N]:
     ## se calcula la respuesta
     start_time = time.perf_counter()
     predicted_answer = memory_agent.answer(instance)
+    sessions_used_by_question = memory_agent.get_sessions_used_by(instance.question_id)
     end_time = time.perf_counter()
 
     print("Turno de GPT5-Mini")
@@ -120,7 +121,9 @@ for instance in longmemeval_dataset[: config.N]:
             "predicted_answer": predicted_answer,
             "question_type": instance.question_type,
             "question_date": instance.question_date,
-            "time_taken_to_answer": end_time-start_time
+            "time_taken_to_answer": end_time-start_time,
+            "session_ids_used": sessions_used_by_question
+            
         }
         if config.longmemeval_dataset_set != "investigathon_held_out":
             result["answer"] = instance.answer

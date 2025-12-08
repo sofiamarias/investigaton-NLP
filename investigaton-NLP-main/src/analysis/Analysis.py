@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/pruebamejor/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/muestracortada/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         question_types = []
         answers = []
@@ -49,7 +49,7 @@ class Analysis:
         bars = plt.bar(types, counts)
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
-        plt.savefig("muestra500parcialmejoracontexto.png")
+        plt.savefig("muestracortada.png")
         plt.show()
 
     

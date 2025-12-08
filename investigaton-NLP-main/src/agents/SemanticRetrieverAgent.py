@@ -19,81 +19,81 @@ class SemanticRetrieverAgent:
     def answer(self, instance: LongMemEvalInstance):
         pass
     ##
+
+
     def get_messages_and_embeddings(self, instance: LongMemEvalInstance):
-        #cache
-        cache_path = f"data/rag/embeddings_{self.embedding_model_name.replace('/', '_')}/{instance.question_id}.parquet"
+        #Cache
+        cache_path = f"data/rag/paired_embeddings_{self.embedding_model_name.replace('/', '_')}/{instance.question_id}.parquet"
         if os.path.exists(cache_path):
             df = pd.read_parquet(cache_path)
+            return df.to_dict(orient="records")
+        
+        documents = []
 
-            messages = df["messages"].tolist()
-            embeddings = df["embeddings"].tolist()
-            session_ids = df["sessions"].tolist()
+        for session in tqdm(instance.sessions, desc="Processing sessions"):
+            msgs = session.messages
+            total_msgs = len(msgs)
 
-            session_lookup = {s.session_id: s for s in instance.sessions}
-            sessions = [session_lookup[sid] for sid in session_ids]
+            for i in range(total_msgs-1):
+                msg_current = msgs[i]
+                msg_next = msgs[i+1]
 
-            return messages, embeddings, sessions
+                #Por si no se respeta el invariante user->assistant, filtramos
+                if msg_current['role'] == 'user' and msg_next['role'] == 'assistant':
+                    #Armamos el texto combinado
+                    combined_text = (
+                        f"User: {msg_current['content']}\n"
+                        f"Assistant: {msg_next['content']}"
+                    )
+                    #ID del par
+                    pair_id = f"{session.session_id}_pair_{i}"
+                    #Embedding del par
+                    vector = self.embed_text(combined_text, self.embedding_model_name)
 
-        messages = []
-        embeddings = []
-        sessions = []
-
-        for session in tqdm(instance.sessions, desc="Embedding sessions"):
-            for message in session.messages:
-                messages.append(message)
-                sessions.append(session)
-                embeddings.append(self.embed_text(
-                f"date: {session.date}: {message['role']}: {message['content']}",
-                self.embedding_model_name
-            ))
-
-        # crear carpeta si no existe
+                    #Armamos el diccionario
+                    doc = {
+                        "id": pair_id,
+                        "embedding": vector,
+                        #Guardamos el texto combinado
+                        "content": combined_text,
+                        "session_id": session.session_id,
+                        "timestamp": session.date,
+                    }
+                    documents.append(doc)
+        #Guardado
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-
-        # guardar tipos serializables (NO objetos Python)
-        df = pd.DataFrame({
-            "messages": messages,
-            "sessions": [s.session_id for s in sessions],
-            "embeddings": embeddings,
-        })
+        df = pd.DataFrame(documents)
         df.to_parquet(cache_path)
-        return messages, embeddings, sessions
+        return documents
 
-    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, k: int, similarity_threshold=0.45):
+    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 10, similarity_threshold=0.45):
         #Borro embedding de fecha
         question_embedding = self.embed_text(f"{instance.question}", self.embedding_model_name)
-        messages, embeddings, sessions = self.get_messages_and_embeddings(instance)
-        similarity_scores = np.dot(embeddings, question_embedding)
+        documents = self.get_messages_and_embeddings(instance)
+
+        #Abstention
+        if not documents:
+            return []
         
+        #Armamos la lista de embeddings
+        embeddings_list = [d["embedding"] for d in documents]
+        embeddings_matrix = np.array(embeddings_list)
+
+        similarity_scores = np.dot(embeddings_matrix, question_embedding)
         #Abstention
         if np.max(similarity_scores) < similarity_threshold:
-            return [], []
+            return []
 
-        # Recuperamos índices ordenados por relevancia
+        #Recuperamos índices ordenados por relevancia
         top_indices = np.argsort(similarity_scores)[::-1][:k]
 
         #Re-ranking
         
-
-
-        found_items = []
-        for i in top_indices:
-            found_items.append({
-                "message": messages[i],
-                "session": sessions[i],
-                "score": similarity_scores[i],
-                "date": sessions[i].date
-            })
-
-        #Ordeno los mensajes por fecha
-        found_items.sort(key=lambda x: x["date"]) 
-
-        final_messages = []
-        final_sessions = []
         
-        for item in found_items:
-            final_messages.append(f"[{item['date']}]: Role: {item['message']['role']} Message: {item['message']['content']}")
-            final_sessions.append(item['session'])
 
-        return final_messages, final_sessions
+        final_documents = [documents[i] for i in top_indices]
+    
+        final_documents.sort(key=lambda x: x["timestamp"]) 
+        
+        return final_documents
 
