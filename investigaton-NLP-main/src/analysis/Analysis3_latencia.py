@@ -30,9 +30,11 @@ class Analysis3:
         fig, ax = plt.subplots(figsize=(10, 7))
 
         # barras
-        barras = ax.barh(metrics['question_type'], metrics['tiempo_en_segs'], color='#4c72b0', zorder=3)
+        barras = ax.barh(metrics['question_type'] , metrics['tiempo_en_segs'], color='#4c72b0', zorder=3)
         plt.subplots_adjust(left=0.2)  # esto porque me quedan cortadas
         ax.set_xlim(0, 15) 
+        ax.xaxis.set_major_formatter(
+                    mtick.FuncFormatter(lambda x, pos: f"{x:.0f} segs"))
 
 
         ax.set_title(' Tiempo promedio en segundos por cada tipo de Pregunta', fontsize=14, pad=15)
