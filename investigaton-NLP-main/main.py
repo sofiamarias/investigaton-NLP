@@ -1,12 +1,14 @@
 import argparse
 import json
 import os
+import time
 from dotenv import load_dotenv
 from src.models.LiteLLMModel import LiteLLMModel
 from src.agents.JudgeAgent import JudgeAgent
 from src.agents.RAGAgent import RAGAgent
 from src.datasets.LongMemEvalDataset import LongMemEvalDataset
 from config.config import Config
+
 
 load_dotenv()
 
@@ -71,7 +73,7 @@ memory_agent = RAGAgent(model=memory_model, embedding_model_name=config.embeddin
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
 # Create results directory
-results_dir = f"data/results/{config.longmemeval_dataset_set}/{config.longmemeval_dataset_type}/embeddings_{config.embedding_model_name.replace('/', '_')}_memory_{config.memory_model_name.replace('/', '_')}_judge_{config.judge_model_name.replace('/', '_')}"
+results_dir = f"data/results/500k10_judge_midiendoLatencia"
 os.makedirs(results_dir, exist_ok=True)
 
 print(f"\nResults will be saved to: {results_dir}")
@@ -86,10 +88,14 @@ for instance in longmemeval_dataset[: config.N]:
         print(f"Skipping {instance.question_id} because it already exists", flush=True)
         continue
 
+    start_time = time.perf_counter()
+
     predicted_answer = memory_agent.answer(instance)
 
     if config.longmemeval_dataset_set != "investigathon_held_out":
         answer_is_correct = judge_agent.judge(instance, predicted_answer)
+   
+    end_time = time.perf_counter()
 
     # Save result
     with open(result_file, "w", encoding="utf-8") as f:
@@ -97,7 +103,8 @@ for instance in longmemeval_dataset[: config.N]:
             "question_id": instance.question_id,
             "question": instance.question,
             "predicted_answer": predicted_answer,
-            "question_type": instance.question_type
+            "question_type": instance.question_type,
+            "time taken to answer": end_time-start_time
         }
         if config.longmemeval_dataset_set != "investigathon_held_out":
             result["answer"] = instance.answer
