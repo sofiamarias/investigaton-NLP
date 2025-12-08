@@ -25,34 +25,31 @@ class RAGAgent:
 
         
         contents = []
-        for document in topk_relevant_documents:
-            contents.append(f"[{document['timestamp']}]: {document['content']}")
-            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(document['session_id'])        #Todavia no funciona
+        for i, document in enumerate(topk_relevant_documents):
+            contents.append(f"Evidence N°{i}: [{document['timestamp']}]: {document['content']} \n")
+            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{document['session_id']}: {document['id']}")        #Todavia no funciona
         #list_contextualized_topk_relevant_messages = self.contextualizer_agent.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
         #contextualized_topk_relevant_messages = "\n\n".join(list_contextualized_topk_relevant_messages)
 
         answer_format = self.answer_format(instance.question)
         prompt = f"""
-        ### INSTRUCTION:
-        You are an intelligent assistant. You must answer the QUESTION based on the provided MEMORY CONTEXT.
+        ### INSTRUCTION
+        You are an intelligent assistant. Answer the USER QUESTION based ONLY on the provided CONVERSATION HISTORY.
 
-        ### MEMORY CONTEXT:
+        ### CONVERSATION HISTORY
+        (Format: [Date] Role: Message)
         {contents}
         -----------------------
-        ### GUIDELINES:
-        1. **Analyze**: Read the context carefully. Look for direct answers OR information that allows you to infer the answer.
-        2. **Synthesize**: You can combine information from multiple messages to form a complete answer.
-        3. **Strictness**: If the context is not related to the question, say "I don't have enough information."
-        4. **Temporal Reasoning**: Pay close attention to the dates in brackets [YYYY-MM-DD]. If you find contradictory information, ALWAYS prioritize the information with the most recent date.
 
-        ### USER QUESTION:
+        ### GUIDELINES
+        1. **Evidence-Based**: The history contains past interactions between a user and an assistant. Use ONLY this information. Do not use external knowledge.
+        2. **Temporal Logic**: Pay attention to dates [YYYY-MM-DD]. If facts conflict, ALWAYS prioritize the MOST RECENT information.
+        3. **Strict Abstention**: If the answer is not in the history, output EXACTLY: "I do not have enough information".
+        4. **Language**: Answer STRICTLY IN ENGLISH.
+
+        ### USER QUESTION
         [{instance.question_date}]: {instance.question}
-
-        ###Output Format
-        {answer_format}
-        
-        Answer ONLY the question using the given format.
-        
+        Answer the question
         """
         messages = [{"role": "user", "content": prompt}]
         answer = self.model.reply(messages)

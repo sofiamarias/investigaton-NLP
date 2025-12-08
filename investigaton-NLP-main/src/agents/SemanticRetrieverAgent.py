@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from sentence_transformers import CrossEncoder
 from src.datasets.LongMemEvalDataset import LongMemEvalInstance
 from litellm import embedding
 """
@@ -9,8 +10,11 @@ Este agente se encarga de, dada una instancia del benchmark, con su query y sus 
 conseguir los top-k mensajes más relevantes.(Pensamos en filtrar primero por sesiones)
 """
 class SemanticRetrieverAgent:
-    def __init__(self, embedding_model_name):
+    def __init__(self, embedding_model_name, reranker_model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
         self.embedding_model_name = embedding_model_name
+        print(f"Cargando modelo Cross-Encoder: {reranker_model_name}...")
+        self.reranker = CrossEncoder(reranker_model_name)
+
     #Calcular el embedding de un texto
     def embed_text(self, message, embedding_model_name):
         response = embedding(model=embedding_model_name, input=message)
@@ -45,10 +49,13 @@ class SemanticRetrieverAgent:
                         f"User: {msg_current['content']}\n"
                         f"Assistant: {msg_next['content']}"
                     )
+                    embedded_text = (f"[{session.date}]:\n"
+                    f"{combined_text}"
+                    )
                     #ID del par
                     pair_id = f"{session.session_id}_pair_{i}"
                     #Embedding del par
-                    vector = self.embed_text(combined_text, self.embedding_model_name)
+                    vector = self.embed_text(embedded_text, self.embedding_model_name)
 
                     #Armamos el diccionario
                     doc = {
@@ -66,7 +73,7 @@ class SemanticRetrieverAgent:
         df.to_parquet(cache_path)
         return documents
 
-    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 10, similarity_threshold=0.45):
+    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 5, similarity_threshold=0.45):
         #Borro embedding de fecha
         question_embedding = self.embed_text(f"{instance.question}", self.embedding_model_name)
         documents = self.get_messages_and_embeddings(instance)
@@ -85,14 +92,23 @@ class SemanticRetrieverAgent:
             return []
 
         #Recuperamos índices ordenados por relevancia
-        top_indices = np.argsort(similarity_scores)[::-1][:k]
+        top_indices = np.argsort(similarity_scores)[::-1][:bi_encoder_k]
 
         #Re-ranking
-        
-        
+        candidate_docs = [documents[i] for i in top_indices]
+        if not candidate_docs:
+            return []
+        #Obtenemos el ranking de cada documento
+        pairs = [[instance.question, doc["content"]] for doc in candidate_docs]
+        reranked_scores = self.reranker.predict(pairs)
+        #Rearmamos los documentos
+        scored_candidates = list(zip(reranked_scores, candidate_docs))
+        #Ordenamos
+        scored_candidates.sort(key=lambda x: x[0], reverse=True)
 
-        final_documents = [documents[i] for i in top_indices]
-    
+        top_cross_encoder_k_tuples = scored_candidates[:cross_encoder_k]
+        final_documents = [doc for score, doc in top_cross_encoder_k_tuples]
+        #Ordenamos por fecha
         final_documents.sort(key=lambda x: x["timestamp"]) 
         
         return final_documents
