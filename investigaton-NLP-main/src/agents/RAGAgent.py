@@ -10,11 +10,11 @@ class RAGAgent:
         self.semantic_retriever_agent = semantic_retriever_agent
 
     def answer(self, instance: LongMemEvalInstance):
-        topk_relevant_messages, topk_relevant_sessions, topk_relevant_dates = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance, 10)
+        topk_relevant_messages, topk_relevant_sessions = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance, 10)
         if not topk_relevant_messages:
             return "I do not have enough information"
 
-        contextualized_topk_relevant_messages = self.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions, topk_relevant_dates)
+        contextualized_topk_relevant_messages = self.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
         prompt = f"""
         You are a helpful assistant that answers a question based on the evidence.
         Nothing else.
@@ -27,14 +27,13 @@ class RAGAgent:
         print("Turno de GPT5-Mini")
         return answer
     
-    def retrieve_contextualized_messages(self, topk_relevant_messages, topk_relevant_sessions, topk_relevant_dates):
+    def retrieve_contextualized_messages(self, topk_relevant_messages, topk_relevant_sessions):
         topk_contextualized_messages = []
         for i in range(len(topk_relevant_messages)):
             message = topk_relevant_messages[i]
             session = topk_relevant_sessions[i]
-            date = topk_relevant_dates[i]
             context = self.contextualize_message_by_session(message, session)
-            contextualized_message = f"[{date}]: Context: {context}. '\n' Message: {message}"
+            contextualized_message = f"[{session.date}]: Context: {context}. '\n' Message: {message}"
             topk_contextualized_messages.append(contextualized_message)
 
         return topk_contextualized_messages
