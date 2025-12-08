@@ -4,7 +4,6 @@ import pandas as pd
 from tqdm import tqdm
 from src.datasets.LongMemEvalDataset import LongMemEvalInstance
 from litellm import embedding
-
 """
 Este agente se encarga de, dada una instancia del benchmark, con su query y sus sessions,
 conseguir los top-k mensajes más relevantes.(Pensamos en filtrar primero por sesiones)
@@ -73,12 +72,17 @@ class SemanticRetrieverAgent:
         # Recuperamos índices ordenados por relevancia
         top_indices = np.argsort(similarity_scores)[::-1][:k]
 
+        #Re-ranking
+        
+
+
         found_items = []
         for i in top_indices:
             found_items.append({
                 "message": messages[i],
                 "session": sessions[i],
-                "score": similarity_scores[i]
+                "score": similarity_scores[i],
+                "date": sessions[i].date
             })
 
         #Ordeno los mensajes por fecha
@@ -88,7 +92,7 @@ class SemanticRetrieverAgent:
         final_sessions = []
         
         for item in found_items:
-            final_messages.append(item['message'])
+            final_messages.append(f"[{item['date']}]: Role: {item['message']['role']} Message: {item['message']['content']}")
             final_sessions.append(item['session'])
 
         return final_messages, final_sessions

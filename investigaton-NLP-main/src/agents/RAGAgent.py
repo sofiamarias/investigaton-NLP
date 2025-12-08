@@ -5,62 +5,72 @@ from tqdm import tqdm
 from src.datasets.LongMemEvalDataset import LongMemEvalInstance
 
 class RAGAgent:
-    def __init__(self, model, semantic_retriever_agent):
+    def __init__(self, model, semantic_retriever_agent, contextualizer_agent):
         self.model = model
         self.semantic_retriever_agent = semantic_retriever_agent
-
+        self.contextualizer_agent = contextualizer_agent
     def answer(self, instance: LongMemEvalInstance):
         topk_relevant_messages, topk_relevant_sessions = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance, 10)
         if not topk_relevant_messages:
             return "I do not have enough information"
+        #Todavia no funciona
+        #list_contextualized_topk_relevant_messages = self.contextualizer_agent.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
+        #contextualized_topk_relevant_messages = "\n\n".join(list_contextualized_topk_relevant_messages)
 
-        contextualized_topk_relevant_messages = self.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
+        answer_format = self.answer_format(instance.question)
         prompt = f"""
-        You are a helpful assistant that answers a question based on the evidence.
-        Nothing else.
-        The evidence is: {contextualized_topk_relevant_messages}
-        The question date is: {instance.question_date} and the question is: {instance.question}
-        Return the answer to the question.
+        ### INSTRUCTION:
+        You are an intelligent assistant. You must answer the USER QUESTION based on the provided MEMORY CONTEXT.
+
+        ### MEMORY CONTEXT:
+        {topk_relevant_messages}
+        -----------------------
+        ### GUIDELINES:
+        1. **Analyze**: Read the context carefully. Look for direct answers OR information that allows you to infer the answer.
+        2. **Synthesize**: You can combine information from multiple messages to form a complete answer.
+        3. **Strictness**: If the context is not related to the question, say "I don't have enough information." However, if the context contains partial clues, use them to answer as best as you can, explicitly stating what is known.
+        2. **Temporal Reasoning**: Pay close attention to the dates in brackets [YYYY-MM-DD]. If you find contradictory information, ALWAYS prioritize the information with the most recent date.
+
+        ### USER QUESTION:
+        [{instance.question_date}]: {instance.question}
+
+        ###Output Format
+        {answer_format}
+        
+        Answer ONLY the question using the given format.
+        
         """
         messages = [{"role": "user", "content": prompt}]
         answer = self.model.reply(messages)
-        print("Turno de GPT5-Mini")
         return answer
     
-    def retrieve_contextualized_messages(self, topk_relevant_messages, topk_relevant_sessions):
-        topk_contextualized_messages = []
-        for i in range(len(topk_relevant_messages)):
-            message = topk_relevant_messages[i]
-            session = topk_relevant_sessions[i]
-            context = self.contextualize_message_by_session(message, session)
-            contextualized_message = f"[{session.date}]: Context: {context}. '\n' Message: {message}"
-            topk_contextualized_messages.append(contextualized_message)
-
-        return topk_contextualized_messages
-
-    def contextualize_message_by_session(self, message, session):
-        session_messages = session.messages
-        message_index = 0
-        for i in range(len(session_messages)):
-            if(session_messages[i]['content'] == message['content']):
-                message_index = i
-                break
-        previous_messages = session_messages[message_index-5:message_index]
-      
-        session_summary = f"Session date: {session.date}, previous messages: {previous_messages}"
+    def answer_format(self, question):
         prompt = f"""
-        You will generate a brief context (1–2 sentences) contextualizing a message with its previous messages.
-        Do NOT repeat the message itself. Do NOT output metadata tokens like <unused045>.
-        <message>
-        {message}
-        </message>
+        ### INSTRUCTION:
+        You are an expert Response Architect. Your goal is to provide a specific instruction on HOW to answer the user's question. 
+        DO NOT answer the question. Only describe the ideal format.
 
-        <session_summary>
-        {session_summary}
-        </session_summary>
-        Return ONLY the context, nothing else.
+        ### EXAMPLES:
+
+        User Question: "How many days ago was my birthday?"
+        Format Instruction: Answer with a single short sentence stating the time difference (e.g., "It was 5 days ago").
+
+        User Question: "What was the last book I read?"
+        Format Instruction: Answer with the title of the book only, without extra text or punctuation.
+
+        User Question: "What do you recommend me for breakfast?"
+        Format Instruction: Provide a polite recommendation based on the user's past preferences mentioned in the context.
+
+        User Question: "List the python libraries mentioned."
+        Format Instruction: Provide a bulleted list of the libraries.
+
+        ### TASK:
+        Define the Format Instruction for the following question.
+        User Question: "{question}"
+
+        Format Instruction:
         """
-
-        messages = [{"role": "user", "content": prompt}]
-        context = self.model.reply(messages)
-        return context.strip()
+        response = [{"role": "user", "content": prompt}]
+        answer = self.model.reply(response)
+        return answer
+    

@@ -25,7 +25,7 @@ class QwenModel(TransformersModel):
 
         # Remove all tool_call sections and collect them into tool_calls
         cleaned_content = re.sub(pattern, call_replacer, content, flags=re.DOTALL).strip()
-
+    
         return tool_calls, cleaned_content
 
     def extract_thinking(self, content):
@@ -40,3 +40,4 @@ class QwenModel(TransformersModel):
         reasoning_content = "\n\n".join(thinking_blocks) if thinking_blocks else None
 
         return reasoning_content, cleaned_content
+
