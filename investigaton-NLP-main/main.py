@@ -88,7 +88,7 @@ memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_re
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
 # Create results directory
-results_dir = f"data/results/{config.longmemeval_dataset_set}/{config.longmemeval_dataset_type}/embeddings_{config.embedding_model_name.replace('/', '_')}_memory_{config.memory_model_name.replace('/', '_')}_judge_{config.judge_model_name.replace('/', '_')}"
+results_dir = f"data/results/muestra500conembeddingsmalltobigyrerankingPRIMERAPASADA"
 os.makedirs(results_dir, exist_ok=True)
 
 print(f"\nResults will be saved to: {results_dir}")

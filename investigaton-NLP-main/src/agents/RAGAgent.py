@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from src.datasets.LongMemEvalDataset import LongMemEvalInstance
-
+import json
 class RAGAgent:
     def __init__(self, model, semantic_retriever_agent, contextualizer_agent):
         self.model = model
@@ -21,48 +21,60 @@ class RAGAgent:
         topk_relevant_documents = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance)
         if not topk_relevant_documents:
             return "I do not have enough information"
-        #Guardamos las sesiones usadas
-
         
-        contents = []
-        for i, document in enumerate(topk_relevant_documents):
+        evidence = []
+        for document in topk_relevant_documents:
+            evidence_dict = {
+                "timestamp": document["timestamp"],
+                "dialogue": document["full_pair_text"]
+            }
+            evidence_str = json.dumps(evidence_dict)
+            evidence.append(evidence_str)
+            #Guardamos las sesiones usadas
+            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{document['session_id']}: {document['id']}")      
 
-            contents.append(
-                "{\n"
-                f'  "timestamp": "{document["timestamp"]}",\n'
-                f'  "content": "{document["content"].replace("\\n", " ")}"\n'
-                "}"
-            )
-            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{document['session_id']}: {document['id']}")        #Todavia no funciona
+          
+        #Todavia no funciona
         #list_contextualized_topk_relevant_messages = self.contextualizer_agent.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
         #contextualized_topk_relevant_messages = "\n\n".join(list_contextualized_topk_relevant_messages)
+        
+        format_instruction = self.answer_format(instance.question)
+        
+        prompt = rag_prompt = f"""
+        ### SYSTEM ROLE
+        You are an analytical reasoning engine with access to a memory history. Your job is to process evidence fragments and generate a precise answer strictly following a requested format.
 
-        answer_format = self.answer_format(instance.question)
-        print(f"ANSWER FORMAT: {answer_format}")
-        print(f"CONTENTS: {contents}")
-        print(f"QUESTION: {instance.question}")
-        prompt = f"""
-        You are an expert AI assistant. Your task is to answer the user's QUESTION using ONLY the provided DOCUMENT. Do not use any external knowledge.
-        
-        ### INSTRUCTIONS:
-        1. Answer the QUESTION based *only* on the facts within the DOCUMENT.
-        2. Follow the format output
-        3. If you have a contradiction between two dates, prioritize the MOST RECENT.
-        3. If you cannot find the answer in the DOCUMENT, respond with: 'I don't have enough information'. However, if you have it, answer.
-        
-        DOCUMENT:
-        ---
-        {contents}
-        ---
-        QUESTION:
-        ---
-        Question Date: {instance.question_date}. Question: {instance.question}
-        ---
-        FORMAT:
-        ---
-        {answer_format}
-        ---
-        Answer:
+        ### RETRIEVED EVIDENCE (Context)
+        {evidence}
+
+        ### REFERENCE INFORMATION
+        - Current Question Date: {instance.question_date} (Use this as "Today" for temporal calculations).
+
+        ### REASONING INSTRUCTIONS (MUST READ)
+        Before generating the final answer, process the evidence following these logic rules:
+
+        1. **Conflict Resolution (Knowledge Update):**
+        - If the evidence shows a change of state (e.g., "I moved to Paris" after "I live in London"), the most recent `timestamp` takes precedence.
+        - If the items are cumulative (e.g., "I have a bike" and later "I bought another one"), SUM THEM UP unless the evidence explicitly states the previous one was sold or lost.
+
+        2. **Temporal Reasoning:**
+        - If the question asks for elapsed time, calculate: `Current Question Date` - `Event Date`.
+        - Explicitly look for past events that match the description (e.g., "museum with a friend") and ignore events that do not match exactly.
+
+        3. **Preference Inference:**
+        - If the user asks for recommendations, scan the evidence for brands, models, or styles they already own or like (e.g., if they have "Sony" gear, recommend "Sony" compatible items).
+
+        4. **Strict Abstention:**
+        - If looking for a specific data point (e.g., "30-gallon tank") and the evidence only mentions other values (18 or 20 gallons), DO NOT HALLUCINATE. Your answer must declare the lack of information.
+
+        ### FINAL FORMAT INSTRUCTION (CRITICAL)
+        Your final response must STRICTLY obey this instruction:
+        "{format_instruction}"
+
+        ### USER QUESTION
+        {instance.question}
+
+        ### YOUR ANSWER:
         """
         messages = [{"role": "user", "content": prompt}]
         answer = self.model.reply(messages)
@@ -70,40 +82,32 @@ class RAGAgent:
     
     def answer_format(self, question):
         prompt = f"""
-        ### TASK:
-        Determine the best answering format for the User Question.
-        Do not answer the question. Output ONLY the "Format Instruction".
+        ### TASK
+        Analyze the User Question and determine the precise formatting instructions for the final answer.
+        DO NOT answer the question. Output ONLY the "Format Instruction".
 
-        ### EXAMPLES:
+        ### EXAMPLES
 
-        User Question: "What bike do I have?"
-        Context: [2022: Bought red bike], [2024: Sold red bike, bought blue bike]
-        Format Instruction: Answer that the user has a blue bike. Explicitly mention that this information supersedes the 2022 data based on the more recent 2024 timestamp.
+        Input: "How long is my commute?"
+        Instruction: Answer only with the time quantity and unit (e.g., "45 minutes"). Be extremely concise.
 
-        User Question: "How long ago did I visit Paris?"
-        Context: [User visit: 2023-01-01], [Today: 2023-01-10]
-        Format Instruction: Calculate the time difference relative to today (e.g., "9 days ago") instead of stating the raw date.
+        Input: "How many bikes do I have?"
+        Instruction: Answer only with the total number (e.g., "2" or "2 bikes"). Perform a summation if there are multiple mentions.
 
-        User Question: "Recommend a breakfast."
-        Context: [Preference: "I only eat vegan food"]
-        Format Instruction: Provide a breakfast recommendation that strictly adheres to the "vegan" preference found in context.
+        Input: "Date: 6/25. How many months have passed since the last time I...?"
+        Instruction: Calculate the time difference relative to the current date. Answer only with the number and unit (e.g., "5 months").
 
-        User Question: "List all my project names."
-        Context: [Session A: "Project Alpha"], [Session B: "Project Beta"]
-        Format Instruction: Create a bulleted list combining items from all sessions (Alpha and Beta).
+        Input: "Can you recommend accessories for my setup?"
+        Instruction: Answer with a detailed and justified list, strictly prioritizing the user's implicit preferences (brands, previous models owned) found in the context.
 
-        User Question: "What is my dog's name?"
-        Context: [No mention of pets]
-        Format Instruction: State clearly that there is no information about a dog in the provided history.
-        
-        User Question: "How much did I spend on tech?"
-        Context: [Ordered a mouse for $50], [Bought a keyboard for $100 later]
-        Format Instruction: Identify the individual costs mentioned (mouse and keyboard), sum them up manually, and answer with the final calculated total amount.
+        Input: "How many 30-gallon tanks do I have?"
+        Instruction: If there is no exact evidence for that specific size, state: "I do not have information regarding 30-gallon tanks."
 
-        ### INPUT:
-        User Question: "{question}"
-        Format Instruction:
-"""
+        ### CURRENT INPUT
+        Question: "{question}"
+
+        ### INSTRUCTION:
+        """
         
         response = [{"role": "user", "content": prompt}]
         answer = self.model.reply(response)
