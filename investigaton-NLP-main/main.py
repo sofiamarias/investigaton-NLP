@@ -73,7 +73,7 @@ memory_agent = RAGAgent(model=memory_model, embedding_model_name=config.embeddin
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
 # Create results directory
-results_dir = f"data/results/500k10_judge_midiendoLatencia"
+results_dir = f"data/results/500k10_judge_midiendoSoloLatencia"
 os.makedirs(results_dir, exist_ok=True)
 
 print(f"\nResults will be saved to: {results_dir}")
@@ -89,13 +89,12 @@ for instance in longmemeval_dataset[: config.N]:
         continue
 
     start_time = time.perf_counter()
-
     predicted_answer = memory_agent.answer(instance)
+    end_time = time.perf_counter()
 
     if config.longmemeval_dataset_set != "investigathon_held_out":
         answer_is_correct = judge_agent.judge(instance, predicted_answer)
    
-    end_time = time.perf_counter()
 
     # Save result
     with open(result_file, "w", encoding="utf-8") as f:
