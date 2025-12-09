@@ -26,30 +26,43 @@ class RAGAgent:
         
         contents = []
         for i, document in enumerate(topk_relevant_documents):
-            contents.append(f"Evidence N°{i}: [{document['timestamp']}]: {document['content']} \n")
+
+            contents.append(
+                "{\n"
+                f'  "timestamp": "{document["timestamp"]}",\n'
+                f'  "content": "{document["content"].replace("\\n", " ")}"\n'
+                "}"
+            )
             self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{document['session_id']}: {document['id']}")        #Todavia no funciona
         #list_contextualized_topk_relevant_messages = self.contextualizer_agent.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
         #contextualized_topk_relevant_messages = "\n\n".join(list_contextualized_topk_relevant_messages)
 
         answer_format = self.answer_format(instance.question)
+        print(f"ANSWER FORMAT: {answer_format}")
+        print(f"CONTENTS: {contents}")
+        print(f"QUESTION: {instance.question}")
         prompt = f"""
-        ### INSTRUCTION
-        You are an intelligent assistant. Answer the USER QUESTION based ONLY on the provided CONVERSATION HISTORY.
-
-        ### CONVERSATION HISTORY
-        (Format: [Date] Role: Message)
+        You are an expert AI assistant. Your task is to answer the user's QUESTION using ONLY the provided DOCUMENT. Do not use any external knowledge.
+        
+        ### INSTRUCTIONS:
+        1. Answer the QUESTION based *only* on the facts within the DOCUMENT.
+        2. Follow the format output
+        3. If you have a contradiction between two dates, prioritize the MOST RECENT.
+        3. If you cannot find the answer in the DOCUMENT, respond with: 'I don't have enough information'. However, if you have it, answer.
+        
+        DOCUMENT:
+        ---
         {contents}
-        -----------------------
-
-        ### GUIDELINES
-        1. **Evidence-Based**: The history contains past interactions between a user and an assistant. Use ONLY this information. Do not use external knowledge.
-        2. **Temporal Logic**: Pay attention to dates [YYYY-MM-DD]. If facts conflict, ALWAYS prioritize the MOST RECENT information.
-        3. **Strict Abstention**: If the answer is not in the history, output EXACTLY: "I do not have enough information".
-        4. **Language**: Answer STRICTLY IN ENGLISH.
-
-        ### USER QUESTION
-        [{instance.question_date}]: {instance.question}
-        Answer the question
+        ---
+        QUESTION:
+        ---
+        Question Date: {instance.question_date}. Question: {instance.question}
+        ---
+        FORMAT:
+        ---
+        {answer_format}
+        ---
+        Answer:
         """
         messages = [{"role": "user", "content": prompt}]
         answer = self.model.reply(messages)
@@ -57,30 +70,41 @@ class RAGAgent:
     
     def answer_format(self, question):
         prompt = f"""
-        ### INSTRUCTION:
-        You are an expert Response Architect. Your goal is to provide a specific instruction on HOW to answer the user's question. 
-        DO NOT answer the question. Only describe the ideal format.
+        ### TASK:
+        Determine the best answering format for the User Question.
+        Do not answer the question. Output ONLY the "Format Instruction".
 
         ### EXAMPLES:
 
-        User Question: "How many days ago was my birthday?"
-        Format Instruction: Answer with a single short sentence stating the time difference (e.g., "It was 5 days ago").
+        User Question: "What bike do I have?"
+        Context: [2022: Bought red bike], [2024: Sold red bike, bought blue bike]
+        Format Instruction: Answer that the user has a blue bike. Explicitly mention that this information supersedes the 2022 data based on the more recent 2024 timestamp.
 
-        User Question: "What was the last book I read?"
-        Format Instruction: Answer with the title of the book only, without extra text or punctuation.
+        User Question: "How long ago did I visit Paris?"
+        Context: [User visit: 2023-01-01], [Today: 2023-01-10]
+        Format Instruction: Calculate the time difference relative to today (e.g., "9 days ago") instead of stating the raw date.
 
-        User Question: "What do you recommend me for breakfast?"
-        Format Instruction: Provide a polite recommendation based on the user's past preferences mentioned in the context.
+        User Question: "Recommend a breakfast."
+        Context: [Preference: "I only eat vegan food"]
+        Format Instruction: Provide a breakfast recommendation that strictly adheres to the "vegan" preference found in context.
 
-        User Question: "List the python libraries mentioned."
-        Format Instruction: Provide a bulleted list of the libraries.
+        User Question: "List all my project names."
+        Context: [Session A: "Project Alpha"], [Session B: "Project Beta"]
+        Format Instruction: Create a bulleted list combining items from all sessions (Alpha and Beta).
 
-        ### TASK:
-        Define the Format Instruction for the following question.
+        User Question: "What is my dog's name?"
+        Context: [No mention of pets]
+        Format Instruction: State clearly that there is no information about a dog in the provided history.
+        
+        User Question: "How much did I spend on tech?"
+        Context: [Ordered a mouse for $50], [Bought a keyboard for $100 later]
+        Format Instruction: Identify the individual costs mentioned (mouse and keyboard), sum them up manually, and answer with the final calculated total amount.
+
+        ### INPUT:
         User Question: "{question}"
-
         Format Instruction:
-        """
+"""
+        
         response = [{"role": "user", "content": prompt}]
         answer = self.model.reply(response)
         return answer

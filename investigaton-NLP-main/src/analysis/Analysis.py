@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/muestracortada/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/longmemeval/short/500k5PostReRankedMasParesUSERAssistant/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         question_types = []
         answers = []
