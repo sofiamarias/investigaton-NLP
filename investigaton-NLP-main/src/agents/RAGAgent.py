@@ -24,92 +24,81 @@ class RAGAgent:
         
         evidence = []
         for document in topk_relevant_documents:
-            evidence_dict = {
-                "timestamp": document["timestamp"],
-                "dialogue": document["full_pair_text"]
+            entry = {
+                "date": document['timestamp'],
+                "session": document['session_id'],
+                # Limpiamos saltos de línea extra para compactar tokens
+                "dialogue": document['full_pair_text'].strip() 
             }
-            evidence_str = json.dumps(evidence_dict)
-            evidence.append(evidence_str)
+            evidence.append(json.dumps(entry, ensure_ascii=False))
             #Guardamos las sesiones usadas
             self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{document['session_id']}: {document['id']}")      
 
-          
+        evidence_text = "\n".join(evidence)
         #Todavia no funciona
         #list_contextualized_topk_relevant_messages = self.contextualizer_agent.retrieve_contextualized_messages(topk_relevant_messages, topk_relevant_sessions)
         #contextualized_topk_relevant_messages = "\n\n".join(list_contextualized_topk_relevant_messages)
         
-        format_instruction = self.answer_format(instance.question)
+        raw_instruction = self.answer_format(instance.question)
+        format_instruction = raw_instruction.replace("Plan:", "").replace("Format Plan:", "").replace("PLAN:", "").strip()            
+        print(format_instruction)
+        prompt = f"""
+        ### ROLE
+        You are a precise Research Assistant. You answer questions based ONLY on the provided memory logs.
+
+        ### MEMORY LOGS (Chronological)
+        {evidence_text}
+
+         ### TASK
+        Question: [{instance.question_date}] {instance.question}
         
-        prompt = rag_prompt = f"""
-        ### SYSTEM ROLE
-        You are an analytical reasoning engine with access to a memory history. Your job is to process evidence fragments and generate a precise answer strictly following a requested format.
+        ### EXECUTION PLAN
+        {format_instruction}
 
-        ### RETRIEVED EVIDENCE (Context)
-        {evidence}
-
-        ### REFERENCE INFORMATION
-        - Current Question Date: {instance.question_date} (Use this as "Today" for temporal calculations).
-
-        ### REASONING INSTRUCTIONS (MUST READ)
-        Before generating the final answer, process the evidence following these logic rules:
-
-        1. **Conflict Resolution (Knowledge Update):**
-        - If the evidence shows a change of state (e.g., "I moved to Paris" after "I live in London"), the most recent `timestamp` takes precedence.
-        - If the items are cumulative (e.g., "I have a bike" and later "I bought another one"), SUM THEM UP unless the evidence explicitly states the previous one was sold or lost.
-
-        2. **Temporal Reasoning:**
-        - If the question asks for elapsed time, calculate: `Current Question Date` - `Event Date`.
-        - Explicitly look for past events that match the description (e.g., "museum with a friend") and ignore events that do not match exactly.
-
-        3. **Preference Inference:**
-        - If the user asks for recommendations, scan the evidence for brands, models, or styles they already own or like (e.g., if they have "Sony" gear, recommend "Sony" compatible items).
-
-        4. **Strict Abstention:**
-        - If looking for a specific data point (e.g., "30-gallon tank") and the evidence only mentions other values (18 or 20 gallons), DO NOT HALLUCINATE. Your answer must declare the lack of information.
-
-        ### FINAL FORMAT INSTRUCTION (CRITICAL)
-        Your final response must STRICTLY obey this instruction:
-        "{format_instruction}"
-
-        ### USER QUESTION
-        {instance.question}
-
-        ### YOUR ANSWER:
+        ### GUIDELINES
+        1. **Be Helpful:** If you find the answer, state it clearly.
+        2. **Use Inference:** If the exact answer is not written word-for-word but can be logically deduced, DO IT. (e.g., if logs say "trip to Paris", assume the user traveled). But do not ASSUME any fact.
+        3. **Partial Answers:** If you have some information but not everything, **answer with what you have**. Do NOT say "not enough info" if you can answer at least part of the question. But do not ASSUME any fact.
+        4. **Conflicts:** In case of conflicts or contradictions, recent logs SUPERSEDE older logs.       
+        ### ANSWER: 
         """
         messages = [{"role": "user", "content": prompt}]
-        answer = self.model.reply(messages)
+        answer = self.model.reply(messages, temperature = 0.0)
         return answer
     
     def answer_format(self, question):
         prompt = f"""
         ### TASK
-        Analyze the User Question and determine the precise formatting instructions for the final answer.
-        DO NOT answer the question. Output ONLY the "Format Instruction".
+        Classify the Question and provide a concise execution plan. Output ONLY the plan.
 
         ### EXAMPLES
 
-        Input: "How long is my commute?"
-        Instruction: Answer only with the time quantity and unit (e.g., "45 minutes"). Be extremely concise.
+        Q: "How many days did I camp?"
+        Plan: 1. Identify unique trips by location. 2. Ignore Assistant repetitions. 3. List trips with durations. 4. Sum the total days.
 
-        Input: "How many bikes do I have?"
-        Instruction: Answer only with the total number (e.g., "2" or "2 bikes"). Perform a summation if there are multiple mentions.
+        Q: "How long before Google did I work?"
+        Plan: 1. Check if the EVIDENCE explicitly confirms USER worked at Google. 2. If no, state "premise not found". 3. If yes, calculate time difference.
 
-        Input: "Date: 6/25. How many months have passed since the last time I...?"
-        Instruction: Calculate the time difference relative to the current date. Answer only with the number and unit (e.g., "5 months").
+        Q: "Why is my bike faster?"
+        Plan: Scan previous EVIDENCE for maintenance actions (e.g., "changed chain") that explain the improvement.
 
-        Input: "Can you recommend accessories for my setup?"
-        Instruction: Answer with a detailed and justified list, strictly prioritizing the user's implicit preferences (brands, previous models owned) found in the context.
+        Q: "Tips for Tokyo?"
+        Plan: Identify tools/apps mentioned in EVIDENCE (e.g., "Suica"). Create tips using ONLY those resources.
 
-        Input: "How many 30-gallon tanks do I have?"
-        Instruction: If there is no exact evidence for that specific size, state: "I do not have information regarding 30-gallon tanks."
+        Q: "Do I have 30-gallon tanks?"
+        Plan: Check EVIDENCE for "30-gallon". If only "18" or "20" are found, state "Information not available".
 
-        ### CURRENT INPUT
-        Question: "{question}"
+        Q: "What was the name of that hostel near the Red Light District that you recommended last time?"
+        Plan: 1. Search EVIDENCE for previous recommendatios from YOU to the USER near the Red Light District. 2. Extract the hostel name.
 
-        ### INSTRUCTION:
+
+        ### INPUT
+        Q: "{question}"
+
+        ### PLAN:
         """
-        
+       
         response = [{"role": "user", "content": prompt}]
-        answer = self.model.reply(response)
+        answer = self.model.reply(response, temperature = 0.0)
         return answer
     

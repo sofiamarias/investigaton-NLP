@@ -88,7 +88,7 @@ memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_re
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
 # Create results directory
-results_dir = f"data/results/muestra500conembeddingsmalltobigyrerankingPRIMERAPASAD"
+results_dir = f"data/results/muestra500SINembeddingsmalltobigyrerankingSEGUNDAPASADAADEMASTIENEMEJORAENPROMPTSYUSODEFALSARESPUESTA"
 os.makedirs(results_dir, exist_ok=True)
 
 print(f"\nResults will be saved to: {results_dir}")
@@ -98,7 +98,7 @@ print("=" * 100)
 # Process samples
 for instance in longmemeval_dataset[: config.N]:
     result_file = f"{results_dir}/{instance.question_id}.json"
-
+   
     if os.path.exists(result_file):
         print(f"Skipping {instance.question_id} because it already exists", flush=True)
         continue

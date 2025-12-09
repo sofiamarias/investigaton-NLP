@@ -13,5 +13,5 @@ class JudgeAgent:
         Return True if the prediction is correct, False otherwise. No other text or explanation.
         """
         messages = [{"role": "user", "content": prompt}]
-        judgment = self.model.reply(messages)
+        judgment = self.model.reply(messages, temperature = 1.0)
         return eval(judgment)
