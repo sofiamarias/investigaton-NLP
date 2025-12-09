@@ -7,9 +7,9 @@ import os
 
 class Analysis3: 
     def __init__(self):
-        results_dir = (f"/home/ubuntu/investigaton-NLP/investigaton-NLP-main/data/results/500k10_judge_midiendoLatencia")
+        results_dir = (f"/home/ubuntu/investigaton-NLP/investigaton-NLP-main/data/results/500k10_judge_midiendoSoloLatencia")
         json_files = [f for f in os.listdir(results_dir) if f.endswith(".json")]
-
+        print(len(json_files))
         results = []
         for filename in json_files:
             filepath = os.path.join(results_dir, filename)
