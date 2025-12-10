@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaRESUMIENDOPAIRS/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/prueba8ParesConPlanINVESTIGATHONNOHELDOUT/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
 
         ORDER_TYPES = ["multi-session", "single-session-preference", "temporal-reasoning", "abstention", "knowledge-update", "single-session-user", "single-session-assistant"]
@@ -26,7 +26,8 @@ class Analysis:
                 
                 # Lógica de tipo (mantenida de tu código)
                 q_id = data.get("question_id", "")
-                q_type = "abstention" if q_id.endswith("_abs") else data.get("question_type")
+                q_abs = data.get("original_non_abstention_question", "nosoy")
+                q_type = "abstention" if q_abs != "nosoy" else data.get("question_type")
                 
                 # Solo sumamos si el tipo está en nuestra lista de interés
                 if q_type in stats:
@@ -66,6 +67,23 @@ class Analysis:
         plt.title("Aciertos por Tipo de Pregunta (Orden Fijo)")
         plt.ylabel("% Aciertos")
         plt.tight_layout()
-        plt.savefig("pruebaRESUMIENDOPAIRS.png")
+        plt.savefig("prueba8ParesConPlanINVESTIGATHONNOHELDOUT.png")
         
-    
+    def make_bar_chart_total(self):
+        
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaTRASAUMENTARVENTANA500/*.json"
+        INPUT_DIR = os.path.expanduser(INPUT_DIR)   
+        cantidadtrues = 0
+        totales = 500
+
+        for filepath in glob.glob(INPUT_DIR):
+            try:
+                with open(filepath, "r") as f:
+                    data = json.load(f)
+                    if data.get("answer_is_correct"):
+                        cantidadtrues += 1
+            except Exception as e:
+                print(f"Error en {filepath}: {e}")
+
+        print(f"TRUES: {cantidadtrues}")
+        print(f"TOTALES: {totales}")

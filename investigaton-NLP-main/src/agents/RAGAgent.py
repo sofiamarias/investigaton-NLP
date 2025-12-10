@@ -11,93 +11,58 @@ class RAGAgent:
         self.contextualizer_agent = contextualizer_agent
         self.cantidaddetrues = 0
         self.sessions_id_used_by_question = {}
-
+        self.cross_encoder_scores_used_by_question = {}
     
     def get_sessions_used_by(self, question_id):
         return self.sessions_id_used_by_question.get(question_id, [])
-
-    def evidence_is_enough(self, question, evidence):
-        prompt = f"""
-        You are a chatbot agent and need to decide if you have enough information in order to answer the question. Analize all the information before answering. Be optimistic while searching, realistic to answer.
-        Justify your answer.
-        Question: {question}
-        Evidence to evaluate: {evidence}    
-        """
-        messages = [{"role": "user", "content": prompt}]
-        answer = self.model.reply(messages, temperature = 0.0)
-        return answer
-
-    def get_relevant_info_by_query(self, pair, question):
-        prompt = f"""
-        You are a Data Extractor Engine. Given a question and a pair of messages between an AI agent and a user, answer a bullet points list with the relevant data from the pair to answer the question. 
-
-        #Example
-        Question: How many classes of History did I take this week?
-        User: I've taken 2 History classes on Tuesday and one on Monday. How many more should I take?
-        Assistant: You should take two more classes to be ready for the exam.
-        Output: 
-        * The user has taken two History classes on Tuesday 
-        * The user has taken one History class on Monday.
-        
-        ## QUESTION
-        {question}
-
-        ## PAIR
-        {pair}
-
-        ##ANSWER
-        """
-        messages = [{"role": "user", "content": prompt}]
-        answer = self.model.reply(messages, temperature = 0.0)
-        return answer
+    def get_cross_encoders_used_by(self, question_id):
+        return self.cross_encoder_scores_used_by_question.get(question_id, [])
 
     def answer(self, instance: LongMemEvalInstance):
         #Conseguimos los documentos más relevantes
-        topk_relevant_documents = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance)
+        topk_relevant_documents, topk_relevant_scores = self.semantic_retriever_agent.retrieve_most_relevant_messages(instance)
         if not topk_relevant_documents:
             return "I do not have enough information"
         
-        evidence = []
-        for document in topk_relevant_documents:
-            entry = {
-                "date": document['timestamp'],
-                #Resumimos el par (user, ia)
-                "evidence": self.get_relevant_info_by_query(document['full_pair_text'], f"[{instance.question_date}]: {instance.question}")
-            }
-            
-            evidence.append(json.dumps(entry, ensure_ascii=False))
+        # 2. Formateo de Evidencia (XML estricto para Gemma 3)
+        evidence_block = ""
+        for doc, score in zip(topk_relevant_documents, topk_relevant_scores):
+            # Sanitización de caracteres reservados
+            safe_pair = doc['full_pair_text'].replace("<", "&lt;").replace(">", "&gt;")
+            evidence_block += f"""
+            <log id="{doc['id']}" date="{doc['timestamp']}">
+            {safe_pair}
+            </log>
+            """
             #Guardamos las sesiones usadas
-            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{document['session_id']}: {document['id']}")      
-
-        evidence_text = "\n".join(evidence)
-        print(evidence_text)
-        #Vemos si la evidencia es suficiente para responder la pregunta (bool)
-    
+            self.sessions_id_used_by_question.setdefault(instance.question_id, []).append(f"{doc['session_id']}: {doc['id']}")      
+            self.cross_encoder_scores_used_by_question.setdefault(instance.question_id, []).append(f"{doc['id']}: {score}")      
         raw_instruction = self.answer_format(instance.question)
         format_instruction = raw_instruction.replace("Plan:", "").replace("Format Plan:", "").replace("PLAN:", "").strip()            
-        print(format_instruction)
         prompt = f"""
-        ### ROLE
-        You are a precise Research Assistant. You answer questions based ONLY on the provided memory logs.
+        You are an expert Personal Memory Assistant. Your goal is to answer the user's question by analyzing their past conversation logs.
 
-        ### MEMORY LOGS (Chronological)
-        {evidence_text}
-
-         ### TASK
-        Question: [{instance.question_date}] {instance.question}
+        ### RULES OF REASONING
+        1. **Knowledge Update (State Tracking):** Old information can be overwritten by newer logs. If the user had a bike in 2020 but sold it in 2022, they have 0 bikes. Always check the dates.
+        2. **Implicit Preferences (Single-Session Preference):** If the user asks for a recommendation, look at their past habits or owned devices in the logs. (e.g., If they own a Sony TV, recommend compatible Sony speakers).
         
-        ### EXECUTION PLAN
-        {format_instruction}
+        ### REAL DATA (Analyze this)
+        <memory_database>
+        {evidence_block}
+        </memory_database>
 
-        ### RULES
-        1. **Conflicts:** In case of conflicts or contradictions, recent logs SUPERSEDE older logs.       
-        2. **User Preferences (Implicit Constraints):** If the user asks a general question (e.g., "tips for video editing"), check the logs for specific tools, software, locations, or habits they already use.
-        ### ANSWER: 
+        ### CURRENT QUESTION
+        **Reference Date:** {instance.question_date}
+        **Question:** {instance.question}
+        **Plan:**
+        {format_instruction}
+        
+        **Answer:**
         """
+ 
         messages = [{"role": "user", "content": prompt}]
-        answer = self.model.reply(messages, temperature = 0.0)
+        answer = self.model.reply(messages, temperature=0.0)
         return answer
-    
     def answer_format(self, question):
         prompt = f"""
         ### TASK
@@ -106,10 +71,13 @@ class RAGAgent:
         ### EXAMPLES
 
         Q: "How many days did I camp?"
-        Plan: 1. Identify unique trips by location. 2. Ignore Assistant repetitions. 3. List trips with durations. 4. Sum the total days.
+        Plan: 1. Identify unique trips by location. 2. Ignore Assistant repetitions. 3. List trips with durations. 4. Answer the sum of the total days.
 
+        Q: "How old was I when Alex was born?"
+        Plan: 1. Identify the user age. 2. Identify the Alex age. 3. Answer the difference between the ages.
+        
         Q: "How long before Google did I work?"
-        Plan: 1. Check if the EVIDENCE explicitly confirms USER worked at Google. 2. If no, state "premise not found". 3. If yes, calculate time difference.
+        Plan: 1. Check if the EVIDENCE explicitly confirms USER worked at Google. 2. If no, state "I do not have enough information". 3. If yes, calculate time difference.
 
         Q: "Why is my bike faster?"
         Plan: Scan previous EVIDENCE for maintenance actions (e.g., "changed chain") that explain the improvement.
@@ -120,6 +88,9 @@ class RAGAgent:
         Q: "Do I have 30-gallon tanks?"
         Plan: Check EVIDENCE for "30-gallon". If only "18" or "20" are found, state "Information not available".
 
+        Q: Which happened first: finishing The Office or attending the charity dinner?...
+        Plan: 1. Find Finishing The Office date. 2. Find the charity dinner date. 3. Answer the most recent event.
+        
         Q: "What was the name of that hostel near the Red Light District that you recommended last time?"
         Plan: 1. Search EVIDENCE for previous recommendatios from YOU to the USER near the Red Light District. 2. Extract the hostel name.
 

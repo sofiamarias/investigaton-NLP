@@ -6,6 +6,7 @@ from sentence_transformers import CrossEncoder
 from src.datasets.LongMemEvalDataset import LongMemEvalInstance
 from litellm import embedding
 from datetime import datetime
+import torch
 """
 Este agente se encarga de, dada una instancia del benchmark, con su query y sus sessions,
 conseguir los top-k mensajes más relevantes.(Pensamos en filtrar primero por sesiones)
@@ -14,7 +15,7 @@ class SemanticRetrieverAgent:
     def __init__(self, embedding_model_name, reranker_model_name="cross-encoder/ms-marco-MiniLM-L-6-v2"):
         self.embedding_model_name = embedding_model_name
         print(f"Cargando modelo Cross-Encoder: {reranker_model_name}...")
-        self.reranker = CrossEncoder(reranker_model_name)
+        self.reranker = CrossEncoder(reranker_model_name, activation_fn=torch.nn.Sigmoid())
 
     #Calcular el embedding de un texto
     def embed_text(self, message, embedding_model_name):
@@ -99,7 +100,7 @@ class SemanticRetrieverAgent:
         df.to_parquet(cache_path)
         return documents
 
-    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 10, similarity_threshold=0.45):
+    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 8, similarity_threshold=0.45):
         #Borro embedding de fecha
         question_embedding = self.embed_text(f"{instance.question}", self.embedding_model_name)
         documents = self.get_messages_and_embeddings(instance)
@@ -151,7 +152,8 @@ class SemanticRetrieverAgent:
 
         top_cross_encoder_k_tuples = scored_candidates[:cross_encoder_k]
         final_documents = [doc for score, doc in top_cross_encoder_k_tuples]
+        final_scores = [score for score, doc in top_cross_encoder_k_tuples]
         #Ordenamos por fecha
         final_documents.sort(key=lambda x: x["timestamp"]) 
-        return final_documents
+        return final_documents, final_scores
 
