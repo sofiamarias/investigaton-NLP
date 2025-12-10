@@ -153,6 +153,5 @@ class SemanticRetrieverAgent:
         final_documents = [doc for score, doc in top_cross_encoder_k_tuples]
         #Ordenamos por fecha
         final_documents.sort(key=lambda x: x["timestamp"]) 
-        
         return final_documents
 

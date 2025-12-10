@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument(
         "-n", "--num-samples",
         type=int,
-        default=500,
+        default=100,
         help="Number of samples to process (default: 10)"
     )
     return parser.parse_args()
@@ -88,7 +88,7 @@ memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_re
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
 # Create results directory
-results_dir = f"data/results/muestra500SINembeddingsmalltobigyrerankingSEGUNDAPASADAADEMASTIENEMEJORAENPROMPTSYUSODEFALSARESPUESTA"
+results_dir = f"data/results/pruebaisenoughSINabstentions"
 os.makedirs(results_dir, exist_ok=True)
 
 print(f"\nResults will be saved to: {results_dir}")
@@ -98,7 +98,6 @@ print("=" * 100)
 # Process samples
 for instance in longmemeval_dataset[: config.N]:
     result_file = f"{results_dir}/{instance.question_id}.json"
-   
     if os.path.exists(result_file):
         print(f"Skipping {instance.question_id} because it already exists", flush=True)
         continue
@@ -106,6 +105,7 @@ for instance in longmemeval_dataset[: config.N]:
     start_time = time.perf_counter()
     predicted_answer = memory_agent.answer(instance)
     sessions_used_by_question = memory_agent.get_sessions_used_by(instance.question_id)
+    
     end_time = time.perf_counter()
 
     print("Turno de GPT5-Mini")

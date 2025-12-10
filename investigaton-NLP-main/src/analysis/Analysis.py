@@ -5,51 +5,67 @@ import os
 import glob
 class Analysis: 
     def __init__(self):
-        pass
+        oracle = os.path.expanduser("~/investigaton-NLP/investigaton-NLP-main/data/longmemeval/longmemeval_oracle.json")
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/muestra500SINembeddingsmalltobigyrerankingSEGUNDAPASADAADEMASTIENEMEJORAENPROMPTSYUSODEFALSARESPUESTA/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaisenough/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
-        question_types = []
-        answers = []
-        wrong_count_by_type = {}
-        total_count_by_type = {}
-        p = glob.glob(INPUT_DIR)
-        for filepath in glob.glob(INPUT_DIR):
-            with open(filepath, "r") as f:
-                data = json.load(f)
+
+        ORDER_TYPES = ["multi-session", "single-session-preference", "temporal-reasoning", "abstention", "knowledge-update", "single-session-user", "single-session-assistant"]
+        stats = {t: {'total': 0, 'correct': 0} for t in ORDER_TYPES}
         
-            qname = data["question_id"]
-            if qname.endswith("_abs"):
-                qtype = "abstention"
-            else:
-                qtype = data.get("question_type")
-            qanswer = data["answer_is_correct"]
-            total_count_by_type[qtype] = total_count_by_type.get(qtype, 0) + 1
-            if(not(qanswer)):
-                wrong_count_by_type[qtype] = wrong_count_by_type.get(qtype, 0) + 1
+        
+        correct_count_by_type = {}
+        total_count_by_type = {}
+        
+        for filepath in glob.glob(INPUT_DIR):
+            try:
+                with open(filepath, "r") as f:
+                    data = json.load(f)
+                
+                # Lógica de tipo (mantenida de tu código)
+                q_id = data.get("question_id", "")
+                q_type = "abstention" if q_id.endswith("_abs") else data.get("question_type")
+                
+                # Solo sumamos si el tipo está en nuestra lista de interés
+                if q_type in stats:
+                    stats[q_type]['total'] += 1
+                    if data.get("answer_is_correct"):
+                        stats[q_type]['correct'] += 1
+            except Exception as e:
+                print(f"Error en {filepath}: {e}")
 
         # Gráfico
- 
-        fractions = {t: f"{wrong_count_by_type.get(t, 0)} / {total_count_by_type[t]}"
-             for t in total_count_by_type}
-        types = list(wrong_count_by_type.keys())
-        #counts = list(wrong_count_by_type.values())
 
-        plt.figure(figsize=(10,5))
+        names = []
+        percentages = []
+        labels = []
+
+        for t in ORDER_TYPES:
+            curr = stats[t]
+            total = curr['total']
+            correct = curr['correct']
+            
+            pct = (correct / total * 100) if total > 0 else 0
+            formatted_name = t.replace("-", '\n')
+            names.append(formatted_name)
+            percentages.append(pct)
+            labels.append(f"{pct:.1f}%\n({correct}/{total})")
+
+        # 4. Gráfico Simplificado
+        plt.figure(figsize=(10, 6))
+        bars = plt.bar(names, percentages, color='steelblue')
+
+        # Etiquetas sobre las barras
+        for bar, label in zip(bars, labels):
+            plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, 
+                     label, ha='center', va='bottom', fontsize=10)
         
-        counts = []
-        for i, t in enumerate(types):
-            wrong = wrong_count_by_type.get(t, 0)
-            total = total_count_by_type[t]
-            ratio = round(wrong * 100 / total, 1)
-            counts.append(ratio)
-            plt.text(i, ratio + 0.5 , f"{ratio}% {wrong}/{total}", ha='center')
-        bars = plt.bar(types, counts)
-        plt.xticks(rotation=45, ha='right')
+        plt.ylim(0, 110) # Margen extra para etiquetas
+        plt.title("Aciertos por Tipo de Pregunta (Orden Fijo)")
+        plt.ylabel("% Aciertos")
         plt.tight_layout()
-        plt.savefig("muestra500SINEMBEDDINGRERANKEDCONrespuestaFALSA.png")
-        plt.show()
-
+        plt.savefig("pruebaisenough.png")
+        
     
