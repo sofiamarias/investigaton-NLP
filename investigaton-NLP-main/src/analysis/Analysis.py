@@ -9,7 +9,7 @@ class Analysis:
     
     def make_bar_chart_wrong_answers_by_types(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaisenough/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaRESUMIENDOPAIRS/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
 
         ORDER_TYPES = ["multi-session", "single-session-preference", "temporal-reasoning", "abstention", "knowledge-update", "single-session-user", "single-session-assistant"]
@@ -66,6 +66,6 @@ class Analysis:
         plt.title("Aciertos por Tipo de Pregunta (Orden Fijo)")
         plt.ylabel("% Aciertos")
         plt.tight_layout()
-        plt.savefig("pruebaisenough.png")
+        plt.savefig("pruebaRESUMIENDOPAIRS.png")
         
     
