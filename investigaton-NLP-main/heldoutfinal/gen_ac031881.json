@@ -1,5 +1,0 @@
-{
-  "question_id": "gen_ac031881",
-  "question": "Where did you say the Windows hosts file is located?",
-  "predicted_answer": "The Windows hosts file is located in the directory `C:\\Windows\\System32\\drivers\\etc`."
-}

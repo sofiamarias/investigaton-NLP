@@ -1,5 +1,0 @@
-{
-  "question_id": "gen_b46e15ee",
-  "question": "Which trip did I plan first: Chicago, San Francisco, Seoul, or Machu Picchu?",
-  "predicted_answer": "Based on the conversation logs, you first planned a trip to **San Francisco**.\n\nHere's the breakdown:\n\n*   **Log ID: ab603dd5_abs_1_round_0_user** (2023/02/15) - You were asking about neighborhoods to stay in San Francisco.\n*   The other logs (Seoul and Machu Picchu) were discussed later."
-}

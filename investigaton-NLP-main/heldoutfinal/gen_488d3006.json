@@ -1,5 +1,0 @@
-{
-  "question_id": "gen_488d3006",
-  "question": "Which SSH command did you recommend to reboot CentOS 7?",
-  "predicted_answer": "The `sudo reboot` command."
-}

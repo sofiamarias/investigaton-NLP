@@ -1,5 +1,0 @@
-{
-  "question_id": "gen_561fabcd",
-  "question": "What command tests the GitHub SSH connection?",
-  "predicted_answer": "The command to test the GitHub SSH connection is:\n\n```bash\nssh -T git@github.com\n```\n"
-}

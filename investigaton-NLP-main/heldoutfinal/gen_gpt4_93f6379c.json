@@ -1,5 +1,0 @@
-{
-  "question_id": "gen_gpt4_93f6379c",
-  "question": "Which trip did I plan first: bike road trip, Costa Rica, or Barcelona?",
-  "predicted_answer": "Based on the provided logs, you first planned a **bike road trip** to Barcelona. Here\u2019s the reasoning:\n\n*   **Log ID: 30677a32_round_0_user** (2023/05/25) - This log discusses planning a bike road trip to Barcelona.\n*   **Log ID: 091aa510_4_round_2_user** (2023/05/25) - This log discusses planning a trip to Barcelona.\n*   **Log ID: 091aa510_4_round_4_user** (2023/05/25) - This log discusses planning a bike tour in Barcelona.\n\nThe logs detailing the Barcelona trip occurred before the Costa Rica planning."
-}

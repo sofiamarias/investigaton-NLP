@@ -1,5 +1,0 @@
-{
-  "question_id": "gen_gpt4_68e94288",
-  "question": "Which trip did I plan first: Seoul or Kamakura?",
-  "predicted_answer": "Based on the provided logs, you planned the trip to Kamakura first.\n\n*   **Log ID: 4c49e37f_round_0_user** (date: 2023/02/11) - This log discusses planning a trip to Seoul.\n*   **Log ID: d8454317_7_round_0_user** (date: 2023/03/05) - This log discusses planning a trip to Kamakura.\n\nTherefore, you planned the trip to Kamakura before the trip to Seoul."
-}
