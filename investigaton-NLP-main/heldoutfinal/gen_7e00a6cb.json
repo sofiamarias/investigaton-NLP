@@ -1,0 +1,5 @@
+{
+  "question_id": "gen_7e00a6cb",
+  "question": "What command did you provide to install Xfce?",
+  "predicted_answer": "The command you provided to install Xfce is:\n\n```\nsudo apt-get install xfce4\n```\n"
+}

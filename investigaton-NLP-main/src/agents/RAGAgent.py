@@ -52,7 +52,6 @@ class RAGAgent:
         </memory_database>
 
         ### CURRENT QUESTION
-        **Reference Date:** {instance.question_date}
         **Question:** {instance.question}
         **Plan:**
         {format_instruction}
@@ -78,6 +77,7 @@ class RAGAgent:
         
         Q: "How long before Google did I work?"
         Plan: 1. Check if the EVIDENCE explicitly confirms USER worked at Google. 2. If no, state "I do not have enough information". 3. If yes, calculate time difference.
+
 
         Q: "Why is my bike faster?"
         Plan: Scan previous EVIDENCE for maintenance actions (e.g., "changed chain") that explain the improvement.

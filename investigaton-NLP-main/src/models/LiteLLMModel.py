@@ -9,7 +9,7 @@ class LiteLLMModel(Model):
 
     def reply(self, messages, temperature, tools=None):
         if self.name == 'ollama/gemma3:4b':
-            response = completion(model=self.name, temperature=temperature, messages=messages, num_ctx = 15000)
+            response = completion(model=self.name, temperature=temperature, messages=messages, num_ctx = 8192)
         if self.name == 'openai/gpt-5-mini':
             response = completion(model=self.name, temperature=temperature, messages=messages)
 

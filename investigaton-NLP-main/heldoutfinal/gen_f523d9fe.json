@@ -1,0 +1,5 @@
+{
+  "question_id": "gen_f523d9fe",
+  "question": "What QEMU flag was suggested to fix the BIOS error?",
+  "predicted_answer": "The QEMU flag suggested to fix the BIOS error was `-bios`."
+}

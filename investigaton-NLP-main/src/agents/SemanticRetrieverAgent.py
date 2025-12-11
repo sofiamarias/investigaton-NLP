@@ -100,7 +100,7 @@ class SemanticRetrieverAgent:
         df.to_parquet(cache_path)
         return documents
 
-    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 8, similarity_threshold=0.45):
+    def retrieve_most_relevant_messages(self, instance: LongMemEvalInstance, bi_encoder_k = 50, cross_encoder_k = 7, similarity_threshold=0.45):
         #Borro embedding de fecha
         question_embedding = self.embed_text(f"{instance.question}", self.embedding_model_name)
         documents = self.get_messages_and_embeddings(instance)

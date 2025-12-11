@@ -71,17 +71,19 @@ class Analysis:
         
     def make_bar_chart_total(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaTRASAUMENTARVENTANA500/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/prueba500conPLAN/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         cantidadtrues = 0
-        totales = 500
+        totales = 0
 
         for filepath in glob.glob(INPUT_DIR):
             try:
                 with open(filepath, "r") as f:
                     data = json.load(f)
+                    totales += 1
                     if data.get("answer_is_correct"):
                         cantidadtrues += 1
+                        
             except Exception as e:
                 print(f"Error en {filepath}: {e}")
 

@@ -46,14 +46,14 @@ def parse_args():
     parser.add_argument(
         "--dataset-set",
         type=str,
-        default="investigathon_evaluation",
+        default="investigathon_held_out",
         choices=["longmemeval", "investigathon_evaluation", "investigathon_held_out"],
         help="Dataset set to use (default: longmemeval)"
     )
     parser.add_argument(
         "-n", "--num-samples",
         type=int,
-        default=250,
+        default=500,
         help="Number of samples to process (default: 10)"
     )
     return parser.parse_args()
@@ -88,7 +88,7 @@ memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_re
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
 # Create results directory
-results_dir = f"data/results/prueba8ParesConPlanINVESTIGATHONNOHELDOUT"
+results_dir = f"data/results/heldoutfinal"
 os.makedirs(results_dir, exist_ok=True)
 
 print(f"\nResults will be saved to: {results_dir}")
@@ -103,10 +103,7 @@ for instance in longmemeval_dataset[: config.N]:
         continue
     ## se calcula la respuesta
     start_time = time.perf_counter()
-    predicted_answer = memory_agent.answer(instance)
-    sessions_used_by_question = memory_agent.get_sessions_used_by(instance.question_id)
-    cross_scores = memory_agent.get_cross_encoders_used_by(instance.question_id)
-    
+    predicted_answer = memory_agent.answer(instance)    
     end_time = time.perf_counter()
 
     print("Turno de GPT5-Mini")
@@ -120,11 +117,6 @@ for instance in longmemeval_dataset[: config.N]:
             "question_id": instance.question_id,
             "question": instance.question,
             "predicted_answer": predicted_answer,
-            "question_type": instance.question_type,
-            "question_date": instance.question_date,
-            "time_taken_to_answer": end_time-start_time,
-            "session_ids_used": sessions_used_by_question,
-            "cross_encoder_score": cross_scores
         }
         if config.longmemeval_dataset_set != "investigathon_held_out":
             result["answer"] = instance.answer

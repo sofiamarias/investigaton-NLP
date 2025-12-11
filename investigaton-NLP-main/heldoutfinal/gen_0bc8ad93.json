@@ -1,0 +1,5 @@
+{
+  "question_id": "gen_0bc8ad93",
+  "question": "Which trip did I plan first: Jordan, Ireland, or Zurich?",
+  "predicted_answer": "Based on the conversation logs, you first planned a trip to **Jordan**.\n\nHere's the breakdown:\n\n*   **Jordan:** The first log entry (answer\\_f4ea84fc\\_2\\_round\\_0\\_user) is dated 2023/01/11 (Wed), discussing a trip to Petra in Jordan.\n*   **Ireland:** The second log (97338ddd\\_1\\_round\\_0\\_user) is dated 2023/01/26 (Thu).\n*   **Zurich:** The last log (ultrachat\\_260376\\_round\\_10\\_user) is dated 2023/02/18 (Sat).\n\nTherefore, your first planned trip was to Jordan."
+}
