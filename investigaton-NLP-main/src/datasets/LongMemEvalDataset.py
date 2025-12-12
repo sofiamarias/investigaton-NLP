@@ -14,11 +14,12 @@ class Session:
 
 
 class LongMemEvalInstance:
-    def __init__(self, question_id, question, sessions, t_question, answer):
+    def __init__(self, question_id, question, sessions, t_question, answer, question_date):
         self.question_id = question_id
         self.question = question
         self.sessions = sessions
         self.t_question = t_question
+        self.question_date = question_date
         self.answer = answer
 
     def __repr__(self):
@@ -80,6 +81,7 @@ class LongMemEvalDataset:
                     row["haystack_session_ids"], row["haystack_dates"], row["haystack_sessions"]
                 )
             ],
-            t_question=row["question_date"],
+            question_date=row["question_date"],
+            question_type=row["question_type"],
             answer=row.get('answer')
         )

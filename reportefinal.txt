@@ -1,0 +1,4 @@
+Score: 254/500. 
+Tiempo promedio por pregunta: 4.91s
+Varianza de la latencia: En gráfico
+AVG Context Lenght: 6181 tokens.

@@ -77,13 +77,11 @@ print(f"  Embedding Model: {config.embedding_model_name}")
 #Modelos
 memory_model = LiteLLMModel(config.memory_model_name)
 judge_model = LiteLLMModel(config.judge_model_name)
-contextualizer_model = LiteLLMModel(config.contextualizer_model_name)
 
 #Agentes
 judge_agent = JudgeAgent(model=judge_model)
 semantic_retriever_agent = SemanticRetrieverAgent(embedding_model_name=config.embedding_model_name)
-contextualizer_agent = ContextualizerAgent(model=contextualizer_model)
-memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_retriever_agent, contextualizer_agent = contextualizer_agent)
+memory_agent = RAGAgent(model=memory_model, semantic_retriever_agent=semantic_retriever_agent)
 
 longmemeval_dataset = LongMemEvalDataset(config.longmemeval_dataset_type, config.longmemeval_dataset_set)
 
@@ -117,6 +115,7 @@ for instance in longmemeval_dataset[: config.N]:
             "question_id": instance.question_id,
             "question": instance.question,
             "predicted_answer": predicted_answer,
+            "question_type": instance.question_type,
         }
         if config.longmemeval_dataset_set != "investigathon_held_out":
             result["answer"] = instance.answer

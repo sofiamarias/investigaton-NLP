@@ -5,11 +5,9 @@ from tqdm import tqdm
 from src.datasets.LongMemEvalDataset import LongMemEvalInstance
 import json
 class RAGAgent:
-    def __init__(self, model, semantic_retriever_agent, contextualizer_agent):
+    def __init__(self, model, semantic_retriever_agent):
         self.model = model
         self.semantic_retriever_agent = semantic_retriever_agent
-        self.contextualizer_agent = contextualizer_agent
-        self.cantidaddetrues = 0
         self.sessions_id_used_by_question = {}
         self.cross_encoder_scores_used_by_question = {}
     

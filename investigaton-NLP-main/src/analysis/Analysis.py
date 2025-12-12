@@ -71,7 +71,7 @@ class Analysis:
         
     def make_bar_chart_total(self):
         
-        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/prueba500conPLAN/*.json"
+        INPUT_DIR = "~/investigaton-NLP/investigaton-NLP-main/data/results/pruebaTRASAUMENTARVENTANA500/*.json"
         INPUT_DIR = os.path.expanduser(INPUT_DIR)   
         cantidadtrues = 0
         totales = 0
