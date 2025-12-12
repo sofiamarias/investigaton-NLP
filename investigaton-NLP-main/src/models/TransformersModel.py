@@ -26,8 +26,7 @@ class TransformersModel(Model):
             )
         else:
             model = AutoModelForCausalLM.from_pretrained(
-                self.name, device_map="auto", dtype=torch.float16
-            )
+                self.name, device_map="auto", load_in_4bit=True)
 
         tokenizer = AutoTokenizer.from_pretrained(self.name)
         return tokenizer, model

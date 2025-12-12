@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 
 class Config(BaseModel):
     """Configuration class for LongMemEval experiments."""
-
     memory_model_name: str = Field(..., description="Memory model name")
     embedding_model_name: str = Field(
         default="ollama/nomic-embed-text", description="Name of the embedding model"
@@ -17,6 +16,7 @@ class Config(BaseModel):
     longmemeval_dataset_set: Literal["longmemeval", "investigathon_evaluation", "investigathon_held_out"] = Field(
         ..., description="Set of LongMemEval dataset to use"
     )
+    contextualizer_model_name: str = Field(..., description="Contextualizer model name")
 
     N: int = Field(default=10, description="Number of samples to process")
 
